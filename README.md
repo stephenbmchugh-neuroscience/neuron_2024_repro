@@ -8,8 +8,8 @@ This repository reproduces panels from Figures 1 and 2 from the published manusc
 
 ## Quickstart
 ```bash
-git clone https://github.com/yourname/paper-figures-repro.git
-cd paper-figures-repro
+git clone https://github.com/yourname/neuron_2024_repro.git
+cd neuron_2024_repro
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
