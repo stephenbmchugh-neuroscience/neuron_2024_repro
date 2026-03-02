@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.envrc
+venv/
+.env/
+.ipynb_checkpoints/
+# Data
+data/
+models/
+# outputs
+reports/
+figures/
+# envs
+*.sqlite3
+# mac
+.DS_Store
