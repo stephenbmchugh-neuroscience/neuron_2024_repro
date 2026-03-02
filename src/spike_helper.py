@@ -1,5 +1,5 @@
 # =============================
-# spik_helper.py
+# spike_helper.py
 # =============================
 """
 spike_helper.py
@@ -15,16 +15,14 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from pathlib import Path
-import smBaseFunctions3 as sbf
-import vBaseFunctions3 as vbf
+from recday_info import multi_ctype_IDs, get_descode
 
 
-def generate_ifr_one_day(mouse,baseblock,desen,sessions,ctype_list,origIDs,nms,binwidth,ext_list):
+def generate_ifr_one_day(baseblock,desen,sessions,cluID_list,origIDs,nms,binwidth,ext_list):
     '''
     
     '''
     ##########################################################################################################
-    cluID_list = sbf.multi_ctype_IDs(ctype_list,origIDs,mouse)
     n_bins = int(np.sum(nms) / binwidth)
     ##########################################################################################################
     ifr_dict = {}
@@ -33,10 +31,10 @@ def generate_ifr_one_day(mouse,baseblock,desen,sessions,ctype_list,origIDs,nms,b
         output_array = np.array([]).reshape(n_bins,n_cells,0)
         for sindx,sess in enumerate(sessions):
             ### Select session
-            sessionLabel = sbf.get_descode(desen,sess)
+            sessionLabel = get_descode(desen,sess)
             fname = baseblock + '_' + str(sessionLabel['filebase'].index[0])
             ##############################################################################################
-            res,clu = vbf.LoadSpikeTimes(fname,trode=None,MinCluId=2,res2eeg=(20000./20000))
+            res,clu = LoadSpikeTimes(fname,trode=None,MinCluId=2,res2eeg=(20000./20000))
             ipath = os.path.split(baseblock)[0] + '/'
             reftemp = get_pulsetimes(ipath,desen,sess,ext,tconv=None,debug=False)
             refTimes = reftemp['begin'].values
@@ -48,12 +46,28 @@ def generate_ifr_one_day(mouse,baseblock,desen,sessions,ctype_list,origIDs,nms,b
                 print(sess,'not enough', ext, 'pulses')
         okey = ext[1:].split('_',3)[0]
         ######################################################################################################
-        print(okey.upper(),output_array.shape)
+        #print(okey.upper(),output_array.shape)
         ifr_dict[okey] = output_array
     ##########################################################################################################
     return ifr_dict
 ##############################################################################################################
+def LoadSpikeTimes(b, trode=None, MinCluId=2, res2eeg=(1250./20000)):
+    '''
+    
+    '''
+    t = '' if trode is None else '.'+str(int(trode))
 
+    res = pd.read_csv(b+'.res'+t, header=None).squeeze('columns').values
+    clu = pd.read_csv(b+'.clu'+t).squeeze('columns').values
+
+    if MinCluId is not None:
+        mask = clu >= MinCluId
+        clu = clu[mask]
+        res = res[mask]
+    res = np.round(res*res2eeg).astype(int)
+
+    return res,clu
+        
 def get_tconv(spk_sr: float = 20000.0, lfp_sr: float = 1250.0, trk_sr: float = 39.0625) -> dict:
     """
     Return a dictionary of conversion factors between common sampling rates.
@@ -98,7 +112,7 @@ def get_pulsetimes(ipath,df,sesstype,ext='.audio_pulse',tconv=None,debug=False):
     output: returns a dataframe
     '''
 
-    session = sbf.get_descode(df,sesstype)
+    session = get_descode(df,sesstype)
     tempind = session.index[0]
     fname = ipath + '/' + str(df['filebase'][tempind]) + ext
     if debug:
@@ -411,7 +425,7 @@ def autocorrelation(
     -----
     This function depends on external lab loaders:
     - `get_descode(desen, sess)` which maps a session label into filebase/index
-    - `vbf.LoadSpikeTimes(fname, ...)` which returns (res, clu)
+    - `LoadSpikeTimes(fname, ...)` which returns (res, clu)
 
     The function aggregates trial IFRs into a 3D array (timebins x 1 x trials).
     """
@@ -421,7 +435,7 @@ def autocorrelation(
     for sindx, sess in enumerate(sessions):
         sessionLabel = get_descode(desen, sess)
         fname = f"{baseblock}_{int(sessionLabel['filebase'].index[0])}"
-        res, clu = vbf.LoadSpikeTimes(fname, trode=None, MinCluId=2, res2eeg=(20000.0 / 20000.0))
+        res, clu = LoadSpikeTimes(fname, trode=None, MinCluId=2, res2eeg=(20000.0 / 20000.0))
         refSpikes = res[clu == cluID]
         if clean_ref:
             refSpikes = clean_clu(refSpikes, thresh=thresh)
@@ -459,7 +473,7 @@ def crosscorrelation(
     for sindx, sess in enumerate(sessions):
         sessionLabel = get_descode(desen, sess)
         fname = f"{baseblock}_{int(sessionLabel['filebase'].index[0])}"
-        res, clu = vbf.LoadSpikeTimes(fname, trode=None, MinCluId=2, res2eeg=(20000.0 / 20000.0))
+        res, clu = LoadSpikeTimes(fname, trode=None, MinCluId=2, res2eeg=(20000.0 / 20000.0))
         refSpikes = res[clu == refcluID]
         refEdges = generate_edges(refSpikes, binwidth=binwidth, nmsBefore=nms[0], nmsAfter=nms[1])
         try:
@@ -506,7 +520,7 @@ def pulsecorrelation(
     for sindx, sess in enumerate(sessions):
         sessionLabel = get_descode(desen, sess)
         fname = f"{baseblock}_{int(sessionLabel['filebase'].index[0])}"
-        res, clu = vbf.LoadSpikeTimes(fname, trode=None, MinCluId=2, res2eeg=(20000.0 / 20000.0))
+        res, clu = LoadSpikeTimes(fname, trode=None, MinCluId=2, res2eeg=(20000.0 / 20000.0))
         ipath = str(Path(baseblock).parent) + '/'
         reftemp = get_pulsetimes(ipath, desen, sess, ext, tconv=None, debug=False)
         duration = [(y - x) for x, y in zip(reftemp['begin'].values, reftemp['end'].values)]
@@ -546,7 +560,7 @@ def pulsecorrelation_multi(
     for sindx, sess in enumerate(sessions):
         sessionLabel = get_descode(desen, sess)
         fname = f"{baseblock}_{int(sessionLabel['filebase'].index[0])}"
-        res, clu = vbf.LoadSpikeTimes(fname, trode=None, MinCluId=2, res2eeg=(20000.0 / 20000.0))
+        res, clu = LoadSpikeTimes(fname, trode=None, MinCluId=2, res2eeg=(20000.0 / 20000.0))
         ipath = str(Path(baseblock).parent) + '/'
         reftemp = get_pulsetimes(ipath, desen, sess, ext, tconv=None, debug=False)
         duration = [(y - x) for x, y in zip(reftemp['begin'].values, reftemp['end'].values)]

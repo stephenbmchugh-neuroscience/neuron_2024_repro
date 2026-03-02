@@ -83,7 +83,7 @@ def load_units(
         return None
 
 
-def get_mouse_info_single(eachdir: str, par_loader: Optional[callable] = None) -> Tuple[str, str, str, Optional[dict], pd.DataFrame]:
+def get_mouse_info_single(BASE_DIR: str, eachdir: str):
     """
     Gather basic info for a single mouse/session directory.
 
@@ -91,49 +91,54 @@ def get_mouse_info_single(eachdir: str, par_loader: Optional[callable] = None) -
     tuple (ipath, bsnm, baseblock, par, desen) where `par` and `desen` may be
     None/empty if loaders are not available or files are missing.
     """
-    ipath = str(Path(eachdir))
+    import vBaseFunctions3 as vbf
+    
+    ipath = str(Path(BASE_DIR,eachdir))
     bsnm = Path(ipath).name
     baseblock = str(Path(ipath) / bsnm)
 
-    par = None
-    desen = pd.DataFrame()
-    try:
-        if par_loader is not None:
-            par = par_loader(baseblock)
-    except Exception:
-        par = None
+    par = vbf.LoadPar(baseblock)
+    desen = vbf.LoadStages(baseblock)
+    desen = update_desen(desen)
+    units = load_units(baseblock,par,each_trode_ext= ".des.",all_trode_ext=".des")
 
-    try:
-        if par_loader is not None and hasattr(par_loader, 'LoadStages'):
-            desen = par_loader.LoadStages(baseblock)
-        else:
-            desen = pd.DataFrame()
-    except Exception:
-        desen = pd.DataFrame()
-
-    return ipath, bsnm, baseblock, par, desen
+    return ipath, bsnm, baseblock, par, desen, units
 
 
-def mouse_info_data_share(mpath: str, ipath: str) -> Tuple[List[str], List[str], List[dict], List[pd.DataFrame], List[object]]:
-    """
-    Load shared metadata arrays saved as .npy files for distribution.
+def update_desen(df,nospaces=True):
+    '''
+    '''
+    if df['filebase'].iloc[0].startswith('sm'):
+        df['filebase'] = 'm' + df['filebase']
+    if nospaces:
+        df['desen'] = df['desen'].str.replace(" ", "")
+    return df
 
-    Expected files in `mpath/ipath/`: mouseID, allBaseblock, allPar, alldesen, units
-    Each is loaded with `allow_pickle=True` to preserve object structures.
+def get_sessions(desenDict,sleepbox=False,sleeponly=False):
+    '''
 
-    Returns
-    -------
-    Tuple
-        (mouseID, allBaseblock, allPar, alldesen, units)
-    """
-    base = Path(mpath) / ipath
-    mouseID = list(np.load(str(base / 'mouseID'), allow_pickle=True))
-    allBaseblock = list(np.load(str(base / 'allBaseblock'), allow_pickle=True))
-    allPar = list(np.load(str(base / 'allPar'), allow_pickle=True))
-    alldesen = list(np.load(str(base / 'alldesen'), allow_pickle=True))
-    units = list(np.load(str(base / 'units'), allow_pickle=True))
-    return mouseID, allBaseblock, allPar, alldesen, units
+    '''
+    if sleepbox:
+        sessions = [x for x in desenDict['desen'].values]
+    else:
+        sessions = [x for x in desenDict['desen'].values if not x.startswith('sb')]
+        sessions = [x for x in oSess if not x.startswith('ss')]
+    if sleeponly:
+        sessions = [x for x in desenDict['desen'].values if x.startswith('sb')]
 
+    return sessions
+
+def get_descode(df,sesstype,debug=False,exact=False):
+    '''
+    '''
+    descode = df[df['desen'].str.contains(sesstype)==True]
+    if exact:
+        descode = df[df['desen'].str.strip()==sesstype]
+    if debug:	
+        print(descode)
+
+    return descode
+    
 
 def get_all_mouse_db_info(
     database: List[str],
@@ -207,4 +212,40 @@ def get_all_mouse_db_info(
         mouseID.append(bsnm)
 
     return mouseID, allBaseblock, allPar, alldesen, units_list
+    
+def get_cell_inds(ctype,units,exact=True):
+    '''
+
+    '''
+    if exact:
+        cell_inds = [index+2 for index, value in enumerate(units['des'].values)
+                          if ctype == value]
+    else:
+        cell_inds = [index+2 for index, value in enumerate(units['des'].values)
+                          if ctype in value]
+
+    return cell_inds
+########################################################################################
+def get_cell_inds_one_mouse(units,ctype_list=['pdg','p3','p1'],exact=True):
+    '''
+    '''
+
+    origIDs = {}
+    for cindx,ctype in enumerate(ctype_list):
+        origIDs[ctype] = get_cell_inds(ctype,units,exact=exact)
+
+    return origIDs
+    
+def multi_ctype_IDs(clist,origIDs,mouse=None):
+    '''
+    
+    '''
+    odata = []
+    for cindx,ctype in enumerate(clist):
+        if mouse is not None:
+            odata += origIDs[ctype][mouse]
+        else:
+            odata += origIDs[ctype]
+        
+    return odata
 

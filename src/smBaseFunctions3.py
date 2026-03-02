@@ -477,34 +477,14 @@ def get_all_cell_inds(database,units,celltype=None,pprint=True,thresh1=100,exact
     '''
     indIDs = {}
     origIDs = {}
-    if celltype is None:
-        celltype = ['p1','p2','p3','pdg','b1','i1',
-                    'b3','bdg','pdgL','bdgL','bdgdL','p3L','p1L','b1L','b3L',
-                    'p1dL','p3dL','pdgdL','b1dL', 'b3dL', 'p1rL','p3rL','bdgrL','b3rL','b1rL','pu','puL','bu','buL']
 
     for cindx,ctype in enumerate(celltype):
         indIDs[ctype], origIDs[ctype] = append_cell_inds(database,
-                                                         units,ctype,thresh1=thresh1,exact=exact)
-        if pprint:
-            for mouse,val in enumerate(database):
-                if len(origIDs[ctype][mouse]) > 0:
-                    print(mouse, val, origIDs[ctype][mouse], len(origIDs[ctype][mouse]))
-        print()
+                                                         units,
+                                                         ctype,
+                                                         thresh1=thresh1,
+                                                         exact=exact)
     return indIDs,origIDs
-########################################################################################
-def get_cell_inds(ctype,units,exact=True):
-    '''
-
-    '''
-    if exact:
-        cell_inds = [index+2 for index, value in enumerate(units['des'].values)
-
-                          if ctype == value]
-    else:
-        cell_inds = [index+2 for index, value in enumerate(units['des'].values)
-                          if ctype in value]
-
-    return cell_inds
 ########################################################################################
 def append_cell_inds(database,units,ctype,thresh1=100,exact=True):
     '''
@@ -512,7 +492,7 @@ def append_cell_inds(database,units,ctype,thresh1=100,exact=True):
     '''
     indxCell_ids = []
     origCell_ids = []
-    tsum=0
+    tsum = 0
     for i,val in enumerate(database):
         tempcells = count_cells(units,i,ctype,exact=exact)
         tsum += len(tempcells)
@@ -523,6 +503,21 @@ def append_cell_inds(database,units,ctype,thresh1=100,exact=True):
     print(ctype,tsum)
     
     return indxCell_ids,origCell_ids
+    
+def get_cell_inds(ctype,units,exact=True):
+    '''
+
+    '''
+    if exact:
+        cell_inds = [index+2 for index, value in enumerate(units['des'].values)
+                          if ctype == value]
+    else:
+        cell_inds = [index+2 for index, value in enumerate(units['des'].values)
+                          if ctype in value]
+
+    return cell_inds
+########################################################################################
+
 ######################################################################################
 def get_cell_inds_one_mouse(units,ctype_list=['pdg','p3','p1'],exact=True):
     '''
