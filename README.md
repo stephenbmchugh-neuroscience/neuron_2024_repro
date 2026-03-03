@@ -8,7 +8,7 @@ This repository contains code to reproduce Figure panels in the published manusc
 
 ## Quickstart
 ```bash
-git clone https://github.com/stephenbmchugh-neuroscience/neuron_2024_repro.git
+git clone https://github.com/yourusername/neuron_2024_repro.git
 cd neuron_2024_repro
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
