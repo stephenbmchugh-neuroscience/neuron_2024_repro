@@ -264,7 +264,7 @@ def save_npy_data(
     output_path: str,
     fname: str,
     odata: object,
-) -> str:
+)	 -> str:
     """
     Save a Python object to a .npy file under `mpath/output_path/`.
 
