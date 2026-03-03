@@ -2508,37 +2508,7 @@ def percentile_ctype(iDict,ikeys,okeys,lb=25,ub=75,round_df=3):
         odata[ikey] = tempDat
     return odata
 
-############################################################################
-def drop_nan_for_df(idata,outerkeys):
-    
-    '''
-    This function will remove nan values from a dict so that it can 
-    be processed by dabest
-    '''
-    
-    odata = {}
-    nanIndx = []
-    for okeyindx,okey in enumerate(outerkeys): 
-        nanIndx.append(idata[okey])
-        
-    nas = np.logical_or.reduce([np.isnan(x) for x in nanIndx])
-    
-    for okeyindx,okey in enumerate(outerkeys):
-        odata[okey] = nanIndx[okeyindx][~nas]
-        
-    return odata
-########################################################################
-def nan_free_dict(idata,outerkeys,innerkeys):
-    '''
-    Function to create dict without any nan values
-    returns odata[ctype]... with structure odata[ctype][sess]
-    '''
-    odata = {}
-    for ikeyindx,ikey in enumerate(innerkeys):
-        odata[ikey] = drop_nan_for_df(idata[ikey],outerkeys)
-        
-    return odata  
-########################################################################
+
 def remove_nan_two_lists(idata1,idata2):
     '''
     

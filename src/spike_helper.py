@@ -18,9 +18,13 @@ from pathlib import Path
 from recday_info import multi_ctype_IDs, get_descode
 
 
-def generate_ifr_one_day(baseblock,desen,sessions,cluID_list,origIDs,nms,binwidth,ext_list):
+def generate_ifr_one_day(baseblock,desen,sessions,cluID_list,origIDs,nms,binwidth,ext_list) -> dict:
     '''
+    Returns a dictionary containing instanaeous firing rate (ifr) arrays: timebins x n_cells x n_events for each event_type
     
+    Returns
+    dict
+        n_timebins x n_cells x n_events array of spike counts
     '''
     ##########################################################################################################
     n_bins = int(np.sum(nms) / binwidth)
@@ -67,7 +71,7 @@ def LoadSpikeTimes(b, trode=None, MinCluId=2, res2eeg=(1250./20000)):
     res = np.round(res*res2eeg).astype(int)
 
     return res,clu
-        
+##############################################################################################################        
 def get_tconv(spk_sr: float = 20000.0, lfp_sr: float = 1250.0, trk_sr: float = 39.0625) -> dict:
     """
     Return a dictionary of conversion factors between common sampling rates.

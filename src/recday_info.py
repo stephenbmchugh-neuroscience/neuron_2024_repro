@@ -105,8 +105,9 @@ def get_mouse_info_single(BASE_DIR: str, eachdir: str):
     return ipath, bsnm, baseblock, par, desen, units
 
 
-def update_desen(df,nospaces=True):
+def update_desen(df:pd.DataFrame,nospaces=True):
     '''
+    clear white space for desen entries
     '''
     if df['filebase'].iloc[0].startswith('sm'):
         df['filebase'] = 'm' + df['filebase']
@@ -130,6 +131,7 @@ def get_sessions(desenDict,sleepbox=False,sleeponly=False):
 
 def get_descode(df,sesstype,debug=False,exact=False):
     '''
+    helper file to get session_level filenames from the desen dataframe
     '''
     descode = df[df['desen'].str.contains(sesstype)==True]
     if exact:
@@ -138,81 +140,7 @@ def get_descode(df,sesstype,debug=False,exact=False):
         print(descode)
 
     return descode
-    
-
-def get_all_mouse_db_info(
-    database: List[str],
-    SF: bool = True,
-    each_trode_ext: str = '.des.',
-    all_trode_ext: str = '.desf',
-    par_loader: Optional[callable] = None,
-):
-    """
-    Collect metadata (units, stages, params) over a list of directories.
-
-    Parameters
-    ----------
-    database : list of str
-        List of session directories to process.
-    SF : bool
-        If True and a stage loader is available, call `update_desen` (caller
-        must provide this function in the namespace). This keeps behavior
-        compatible with the legacy code.
-    par_loader : callable, optional
-        Optional loader (e.g., vbf.LoadPar) used to populate `par` and
-        optionally `LoadStages`.
-
-    Returns
-    -------
-    Tuple
-        (mouseID, allBaseblock, allPar, alldesen, units_list)
-    """
-    units_list = []
-    mouseID = []
-    alldesen = []
-    allBaseblock = []
-    allPar = []
-
-    for eachdir in database:
-        ipath = str(Path(eachdir))
-        bsnm = Path(ipath).name
-        baseblock = str(Path(ipath) / bsnm)
-        allBaseblock.append(baseblock)
-
-        par = None
-        try:
-            if par_loader is not None:
-                par = par_loader(baseblock)
-        except Exception:
-            par = None
-        allPar.append(par)
-
-        try:
-            units_df = load_units(baseblock, par=par, each_trode_ext=each_trode_ext, all_trode_ext=all_trode_ext)
-        except Exception:
-            units_df = None
-        units_list.append(units_df)
-
-        try:
-            if par_loader is not None and hasattr(par_loader, 'LoadStages'):
-                des_df = par_loader.LoadStages(baseblock)
-            else:
-                des_df = pd.DataFrame()
-        except Exception:
-            des_df = pd.DataFrame()
-
-        if SF and not des_df.empty:
-            # `update_desen` is a legacy helper expected in the caller namespace.
-            try:
-                des_df = update_desen(des_df)
-            except Exception:
-                pass
-
-        alldesen.append(des_df)
-        mouseID.append(bsnm)
-
-    return mouseID, allBaseblock, allPar, alldesen, units_list
-    
+       
 def get_cell_inds(ctype,units,exact=True):
     '''
 
@@ -238,7 +166,7 @@ def get_cell_inds_one_mouse(units,ctype_list=['pdg','p3','p1'],exact=True):
     
 def multi_ctype_IDs(clist,origIDs,mouse=None):
     '''
-    
+    get the unit_ids for all cells in clist using the dictioary origIDs
     '''
     odata = []
     for cindx,ctype in enumerate(clist):
@@ -248,4 +176,11 @@ def multi_ctype_IDs(clist,origIDs,mouse=None):
             odata += origIDs[ctype]
         
     return odata
+    
+def display_unit_df(units,ctype_list=['pdg','p3','p1']):
+    '''
+
+    '''
+    for ctype in ctype_list:
+        display(units[units['des'] == ctype])
 

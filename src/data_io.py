@@ -1,5 +1,5 @@
 # =============================
-# io.py
+# data_io.py
 # =============================
 from __future__ import annotations
 from pathlib import Path
@@ -7,12 +7,165 @@ from typing import Iterable, List
 import datetime
 import os
 import numpy as np
-import vBaseFunctions3 as vbf
-import smBaseFunctions3 as sbf
+import numpy.typing as npt
 
 # ---------------------------------------------------------------------
-# Database utilities
+# Database and summary data utilities
 # ---------------------------------------------------------------------
+
+def data_loader(
+    BASE_DIR: str,
+    path_to_data: str,
+    ctype_list: List[str],
+    event_list: List[str] = ['ds', 'swr', 'ds1', 'ds2'],
+    file_ext: str = '.npy'
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Load summary data for multiple event types.
+
+    Parameters
+    ----------
+    BASE_DIR : str
+        Base directory containing the dataset.
+    path_to_data : str
+        Relative path from BASE_DIR to the data folder.
+    ctype_list : List[str]
+        List of content/type identifiers passed to `get_summary_data`.
+    event_list : List[str], optional
+        List of event subdirectories to process
+        (e.g., ['ds', 'swr', 'ds1', 'ds2']).
+    file_ext : str, optional
+        File extension of the data files, by default '.npy'.
+
+    Returns
+    -------
+    Dict[str, Dict[str, Any]]
+        Nested dictionary structured as:
+            {
+                event_key: {
+                    content_type: loaded_data
+                }
+            }
+
+    Notes
+    -----
+    For each event in `event_list`, this function calls
+    `get_summary_data` on the corresponding subdirectory.
+    """
+    path_to_dir = str(Path(BASE_DIR, path_to_data))
+
+    all_summary_data: Dict[str, Dict[str, Any]] = {}
+
+    for event_key in event_list:
+        ipath = f"{path_to_dir}/{event_key}"
+        temp_dat = get_summary_data(
+            ipath, ctype_list, file_ext, pprint=False
+        )
+        all_summary_data[event_key] = temp_dat
+
+    return all_summary_data
+
+def get_summary_data(
+    ipath: str,
+    ext_pt1: List[str],
+    ext_pt2: str,
+    pprint: bool = True
+) -> Dict[str, Any]:
+    """
+    Collect summary data files from a directory based on file type extensions.
+
+    Parameters
+    ----------
+    ipath : str
+        Path to the directory containing the data files.
+    ext_pt1 : List[str]
+        List of file type identifiers (e.g., ['type1', 'type2']).
+        Each entry is used to construct a file extension pattern.
+    ext_pt2 : str
+        File extension suffix (e.g., '.npy').
+    pprint : bool, optional
+        Whether to print file information during loading, by default True.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Dictionary mapping each file type (from ext_pt1) to the
+        corresponding loaded data returned by `get_files`.
+
+    Notes
+    -----
+    This function assumes the existence of a `get_files` function
+    with signature similar to:
+        get_files(path, extension, rev=False, npy=True, pprint=True)
+    """
+    data_files: Dict[str, Any] = {}
+    fid: List[str] = []
+
+    for ftype in ext_pt1:
+        extt1 = "_" + ftype + ext_pt2
+        data_files[ftype], fid = get_files(
+            ipath, extt1, rev=False, npy=True, pprint=pprint
+        )
+
+    return data_files
+
+def get_files(
+    path: str,
+    extt: str,
+    rev: bool = False,
+    npy: bool = True,
+    pprint: bool = True
+) -> Tuple[List[npt.NDArray], List[str]]:
+    """
+    Load files from a directory matching a given extension pattern.
+
+    Parameters
+    ----------
+    path : str
+        Directory path to search for files.
+    extt : str
+        File extension pattern to match (e.g., '_type.npy').
+        Only files ending with this string are loaded.
+    rev : bool, optional
+        If True, sort files in reverse order, by default False.
+    npy : bool, optional
+        If True, load files using `numpy.load`. If False,
+        load using `numpy.loadtxt`, by default True.
+    pprint : bool, optional
+        If True, print matched filenames during loading,
+        by default True.
+
+    Returns
+    -------
+    Tuple[List[numpy.ndarray], List[str]]
+        A tuple containing:
+        - List of loaded NumPy arrays.
+        - List of corresponding file names.
+
+    Notes
+    -----
+    - Uses `os.walk` to traverse the directory (non-recursive behavior
+      since only filenames from the given `path` are loaded).
+    - `allow_pickle=True` is enabled when loading `.npy` files.
+    """
+    iarray: List[npt.NDArray] = []
+    fileID: List[str] = []
+
+    for root, dirs, files in os.walk(path):
+        for filen in sorted(files, reverse=rev):
+            if filen.endswith(extt):
+                if pprint:
+                    print(f"{extt} files are: {filen}")
+
+                fileID.append(filen)
+                fullpath = os.path.join(root, filen)
+
+                if npy:
+                    iarray.append(np.load(fullpath, allow_pickle=True))
+                else:
+                    iarray.append(np.loadtxt(fullpath))
+
+    return iarray, fileID
 
 def read_db(
     filename: str,
@@ -144,7 +297,6 @@ def savefig(
     opath: str,
     ftitle: str,
     ext: str = ".svg",
-    dl: bool = True,
 ) -> str:
     """
     Save a matplotlib figure to disk and return the saved path.
@@ -171,11 +323,6 @@ def savefig(
     str
         Absolute path to the saved figure.
     """
-    if dl:
-        opath = opath.replace(
-            "/mnt/smchugh2/lfpd4/",
-            "/Dupret_Lab/analysis/smchugh_analysis/",
-        )
 
     out_dir = Path(opath)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -261,33 +408,4 @@ def get_database_dl(
     return get_database(dbname, ipath, mpath=mpath, old_mpath=old_mpath, new_mpath=new_mpath, update=update, pprint=pprint)
     
     
-def get_summary_data(ipath,ext_pt1,ext_pt2,pprint=True):
-    '''
-    
-    '''
-    data_files = {}
-    fid = []
-    for findx,ftype in enumerate(ext_pt1):
-        extt1 = '_' + ftype + ext_pt2
-        data_files[ftype],fid = get_files(ipath,extt1,rev=False,npy=True,pprint=pprint)
-    
-    return data_files
 
-def get_files(path,extt,rev=False,npy=True,pprint=True):
-    '''
-
-    '''
-    iarray = []
-    fileID = []
-    for root, dirs, files in os.walk(path):
-        for filen in sorted(files,reverse=rev):
-            if filen.endswith(extt):
-                if pprint:
-                    print("{0:} files are: {1:}".format(extt,filen))
-                fileID.append(filen)
-                fullpath = path + '/' + filen
-                if npy:
-                    iarray.append(np.load(fullpath,allow_pickle=True))
-                else:
-                    iarray.append(np.loadtxt(fullpath))
-    return iarray, fileID 

@@ -187,6 +187,36 @@ def remove_nans_paired(
 
     return out
 ###########################################################################################################
+def drop_nan_for_df(idata,outerkeys):
+    
+    '''
+    This function will remove nan values from a dict so that it can 
+    be processed by dabest and other analysis functions
+    '''
+    
+    odata = {}
+    nanIndx = []
+    for okeyindx,okey in enumerate(outerkeys): 
+        nanIndx.append(idata[okey])
+        
+    nas = np.logical_or.reduce([np.isnan(x) for x in nanIndx])
+    
+    for okeyindx,okey in enumerate(outerkeys):
+        odata[okey] = nanIndx[okeyindx][~nas]
+        
+    return odata
+########################################################################
+def nan_free_dict(idata,outerkeys,innerkeys):
+    '''
+    Function to create dict without any nan values
+    returns odata[ctype]... with structure odata[ctype][sess]
+    '''
+    odata = {}
+    for ikeyindx,ikey in enumerate(innerkeys):
+        odata[ikey] = drop_nan_for_df(idata[ikey],outerkeys)
+        
+    return odata  
+########################################################################
 def generate_nan_free_z_score(
     allDat: Dict,
     okey_list: Sequence[str],

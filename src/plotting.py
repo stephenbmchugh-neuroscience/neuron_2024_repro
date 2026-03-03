@@ -5,8 +5,8 @@
 plotting.py
 -----------
 Matplotlib plotting helpers used to reproduce figures.
-All plotting functions accept or return (fig, ax) so the caller may further
-customize or save using `io.savefig`.
+Plotting functions accept or return (fig, ax) so the caller may further
+customize or save using `data_io.savefig`.
 """
 
 from typing import Optional, Tuple, List
@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as Ticker
 from matplotlib.ticker import FuncFormatter
 import seaborn as sns
-import dabest as db2
 import smBaseFunctions3 as sbf
 from my_mpl_defaults import *
 from analysis import bin_array
@@ -423,10 +422,10 @@ def plot_individual_event_rasters(ifr_dict,
             ax.set_title(ftitle, y=1.05, x=0.5)
             plt.show()
 ##################################################################################################
-###############################################################################################################
 def get_ylim_ctype(ctype,pulse_type):
     '''
-    
+    Helper function to get ylimits for specified cell types to visualise
+    group responses during sharp-wave ripples (swr) and dentate spikes (ds)
     '''
     if pulse_type.startswith('ds'):
             ylim_dict = {'pdg':(0,16),'pdgL':(0,20),'p3':(0,12),'p1':(0,12),
