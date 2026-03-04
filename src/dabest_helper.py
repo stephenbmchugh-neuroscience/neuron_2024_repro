@@ -98,9 +98,9 @@ def plot_dabest_swarm_contrast(
         eslab = 'Median ' + r'$\Delta$'
     #######################################################################################################
     if my_color_palette is None:
-        my_color_palette = [gray2, GREEN, PURPLE, BLUE, ORNG,
-                            gray2, GREEN, PURPLE, BLUE, ORNG,
-                            gray2, GREEN, PURPLE, BLUE, ORNG
+        my_color_palette = [gray2, BLUE, PURPLE, GREEN, ORNG,
+                            gray2, BLUE, PURPLE, GREEN, ORNG,
+                            gray2, BLUE, PURPLE, GREEN, ORNG,
                            ]
     #####################################################################################################
     fwd, fht = fwd * len(sbf.flatten(df_idx)) * size_scale, fht * size_scale

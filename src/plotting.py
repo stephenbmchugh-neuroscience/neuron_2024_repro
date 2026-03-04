@@ -22,6 +22,37 @@ from my_mpl_defaults import *
 from analysis import bin_array
 
 
+
+def figure_chooser(figure_panel: int) -> List[str]:
+    """
+    Return the list of event types corresponding to a given figure panel.
+
+    Parameters
+    ----------
+    figure_panel : int
+        The figure panel identifier. 
+        - 1 returns ['ds', 'swr']
+        - 2 returns ['ds1', 'ds2']
+
+    Returns
+    -------
+    List[str]
+        A list of event type strings associated with the specified panel.
+
+    Raises
+    ------
+    ValueError
+        If an unsupported figure_panel value is provided.
+    """
+    if figure_panel == 1:
+        event_type_list = ['ds', 'swr']
+    elif figure_panel == 2:
+        event_type_list = ['ds1', 'ds2']
+    else:
+        raise ValueError(f"Unsupported figure_panel: {figure_panel}")
+
+    return event_type_list
+
 def cm2inch(*tupl: float) -> Tuple[float, ...]:
     """Convert centimeters to inches for matplotlib figsize arguments.
 
@@ -583,7 +614,7 @@ def generate_heatmaps(zscore_dat,
                              vmin=vmin,
                              vmax=vmax,
                              interpolation=interpolation,
-                             interpolation_stage='auto',
+                             interpolation_stage='data',
                              origin=origin)
         
         ylim = (0,im_dat.shape[1])

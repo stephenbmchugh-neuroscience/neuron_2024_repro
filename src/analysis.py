@@ -70,7 +70,7 @@ def _ensure_2d_channel_axis(x: np.ndarray) -> np.ndarray:
 def generate_z_score(
     allDat: Dict,
     okey_list: Sequence[str],
-    smpts: Optional[int] = None,
+    smpts: Optional[int] = 3,
     polyorder: int = 1,
 ) -> Dict:
     """
@@ -95,6 +95,7 @@ def generate_z_score(
         New dict with same top-level keys; values are dicts mapping each ctype to
         a z-scored numpy array with shape (time, channels).
     """
+    from scipy.signal import savgol_filter
     if smpts is not None:
         if smpts <= polyorder:
             raise ValueError("smpts (window_length) must be > polyorder")
