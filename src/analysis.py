@@ -299,29 +299,69 @@ def generate_nan_free_z_score(
 
     return clean
 ###########################################################################################################
-def get_max_rate_dict(allDat: Dict,
-                      celltype: List,
-                      maxrate_range=(198,202),
-                      baseline_range=(0,100)):
-    '''
+def get_max_rate_dict(
+    allDat: Dict[str, Any],
+    celltype: List[str],
+    maxrate_range: Tuple[int, int] = (198, 202),
+    baseline_range: Tuple[int, int] = (0, 100),
+) -> Dict[str, Dict[str, np.ndarray]]:
+    """
+    Compute maximum-rate and baseline-rate dictionaries for given cell types,
+    then reverse the dictionary structure.
 
-    '''
-    maxrate_dat = generate_mean_rate(allDat,
-                                     celltype,
-                                     xrange=maxrate_range
-                                     )
-    baserate_dat = generate_mean_rate(allDat,
-                                     celltype,
-                                     xrange=(0,100)
-                                     )
-    ###############################################################################################
-    maxrate_dat['baseline'] = {'pdg':np.array([]),
-                               'p3':np.array([]),
-                               'p1':np.array([])}
-    ###############################################################################################
-    for cindx,ctype in enumerate(celltype):
-        maxrate_dat['baseline'][ctype] = baserate_dat['ds'][ctype]
-    
+    This function:
+    1. Computes mean rates over `maxrate_range`.
+    2. Computes baseline mean rates over `baseline_range`.
+    3. Inserts a 'baseline' entry into the max-rate dictionary using
+       baseline values from the 'ds' condition.
+    4. Returns the reversed dictionary using `sbf.reverse_dict`.
+
+    Parameters
+    ----------
+    allDat : Dict[str, Any]
+        Nested dataset dictionary passed to `generate_mean_rate`.
+        Expected structure must be compatible with that function.
+    celltype : List[str]
+        List of cell type names to process.
+    maxrate_range : Tuple[int, int], optional
+        Index range (start, end) over which to compute maximum rate.
+        Default is (198, 202).
+    baseline_range : Tuple[int, int], optional
+        Index range (start, end) over which to compute baseline rate.
+        Default is (0, 100).
+
+    Returns
+    -------
+    Dict[str, Dict[str, np.ndarray]]
+        Reversed dictionary of maximum and baseline rates.
+        The exact structure depends on `sbf.reverse_dict`.
+
+    Raises
+    ------
+    KeyError
+        If expected keys (e.g., 'ds') are missing from intermediate results.
+    """
+    # Compute max-rate data
+    maxrate_dat = generate_mean_rate(
+        allDat,
+        celltype,
+        xrange=maxrate_range,
+    )
+
+    # Compute baseline data
+    baserate_dat = generate_mean_rate(
+        allDat,
+        celltype,
+        xrange=baseline_range,
+    )
+
+    # Initialize baseline entry
+    maxrate_dat["baseline"] = {ctype: np.array([]) for ctype in celltype}
+
+    # Populate baseline values using the 'ds' condition
+    for ctype in celltype:
+        maxrate_dat["baseline"][ctype] = baserate_dat["ds"][ctype]
+
     return sbf.reverse_dict(maxrate_dat)
 
 
