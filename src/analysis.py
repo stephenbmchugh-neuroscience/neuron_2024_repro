@@ -1,5 +1,5 @@
 """analysis.py
-Statistical analysis / model-fitting functions.
+Data reduction, z-scoring and statistical analysis
 """
 import numpy as np
 import pandas as pd
@@ -10,42 +10,107 @@ from sklearn.linear_model import LogisticRegression
 
 import copy
 import logging
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Any, Callable, Mapping
 
 logger = logging.getLogger(__name__)
 
 ################################################################################################################
-def generate_mean_rate(allDat,celltype,xrange=(0,150)):
-    '''
-    
-    '''
-    odata = {}
-    for ikey,val in allDat.items():
-        tempdict = {}
-        for cindx,ctype in enumerate(celltype):
+def generate_mean_rate(
+    allDat: Mapping[Any, Mapping[str, Any]],
+    celltype: Iterable[str],
+    xrange: Tuple[int, int] = (0, 150)
+) -> Dict[Any, Dict[str, np.ndarray]]:
+    """
+    Compute the mean firing rate (ignoring NaNs) for specified cell types
+    within a given index range.
+
+    Parameters
+    ----------
+    allDat : Mapping[Any, Mapping[str, Any]]
+        Nested dictionary-like structure where:
+        - Outer keys represent dataset/session identifiers.
+        - Inner keys correspond to cell types.
+        - allDat[key][celltype][0] is expected to be an array-like object
+          containing rate data.
+    celltype : Iterable[str]
+        Iterable of cell type names to process.
+    xrange : Tuple[int, int], optional
+        Start (inclusive) and end (exclusive) indices defining the slice
+        over which to compute the mean. Default is (0, 150).
+
+    Returns
+    -------
+    Dict[Any, Dict[str, np.ndarray]]
+        Dictionary with the same outer keys as `allDat`. Each value is a
+        dictionary mapping cell types to their mean rate (computed with
+        `np.nanmean` over the specified range along axis 0).
+    """
+    odata: Dict[Any, Dict[str, np.ndarray]] = {}
+
+    for ikey, val in allDat.items():
+        tempdict: Dict[str, np.ndarray] = {}
+        for ctype in celltype:
             tempdat = np.squeeze(val[ctype][0])
             slice_data = tempdat[xrange[0]:xrange[1]]
-            tempdict[ctype] = np.nanmean(tempdat[xrange[0]:xrange[1]],axis=0)
+            tempdict[ctype] = np.nanmean(slice_data, axis=0)
         odata[ikey] = tempdict
-        
+
     return odata
 ####################################################################################
-def bin_array(idata, axis=0, binstep=10, binsize=10, func=np.nanmean):
-    '''
+def bin_array(
+    idata: np.ndarray,
+    axis: int = 0,
+    binstep: int = 10,
+    binsize: int = 10,
+    func: Callable[[np.ndarray, int], np.ndarray] = np.nanmean
+) -> np.ndarray:
+    """
+    Bin an array along a specified axis using a sliding window.
 
-    '''
-    idata = np.array(idata)
+    Binning is performed by stepping through the specified axis in increments
+    of `binstep` and applying `func` over windows of size `binsize`.
+
+    Parameters
+    ----------
+    idata : np.ndarray
+        Input array to be binned.
+    axis : int, optional
+        Axis along which to perform binning. Default is 0.
+    binstep : int, optional
+        Step size between consecutive bins. Default is 10.
+    binsize : int, optional
+        Size of each bin window. Default is 10.
+    func : Callable[[np.ndarray, int], np.ndarray], optional
+        Function applied to each bin. Must accept an array and an axis
+        argument. Default is `np.nanmean`.
+
+    Returns
+    -------
+    np.ndarray
+        Binned array with the same number of dimensions as the input,
+        where the specified axis has been reduced according to the
+        binning procedure.
+    """
+    idata = np.asarray(idata)
     dims = np.array(idata.shape)
+
+    # Move target axis to front
     argdims = np.arange(idata.ndim)
-    argdims[0], argdims[axis]= argdims[axis], argdims[0]
+    argdims[0], argdims[axis] = argdims[axis], argdims[0]
     idata = idata.transpose(argdims)
-    idata = [func(np.take(idata,np.arange(int(i*binstep),int(i*binstep+binsize)),0),0) 
-             for i in np.arange(dims[axis]//binstep)]
-    
-    odata = np.array(idata).transpose(argdims)
-    
-    return odata
-    
+
+    # Perform binning
+    binned = [
+        func(
+            np.take(idata, np.arange(int(i * binstep), int(i * binstep + binsize)), axis=0),
+            axis=0,
+        )
+        for i in range(dims[axis] // binstep)
+    ]
+
+    odata = np.array(binned).transpose(argdims)
+
+    return odata  
 ##########################################################################################################################
 def _ensure_2d_channel_axis(x: np.ndarray) -> np.ndarray:
     """
@@ -260,9 +325,3 @@ def get_max_rate_dict(allDat: Dict,
     return sbf.reverse_dict(maxrate_dat)
 
 
-def train_simple_model(X: np.ndarray, y: np.ndarray, random_state: int = 42):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=random_state, test_size=0.2)
-    clf = LogisticRegression(max_iter=1000, random_state=random_state)
-    clf.fit(X_train, y_train)
-    score = clf.score(X_test, y_test)
-    return clf, score
