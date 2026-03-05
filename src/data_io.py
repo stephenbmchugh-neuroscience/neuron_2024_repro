@@ -291,6 +291,66 @@ def save_npy_data(
         np.save(fh, odata)
     return str(fullpath)
 
+def load_npy(
+    BASE_DIR: str,
+    path_to_data:str,
+    fname: str, 
+    file_ext: str =".npy", 
+    allow_pickle=True):
+    """
+    Load a NumPy .npy file.
+    """
+    out_dir = str(Path(BASE_DIR) / path_to_data)
+    fullpath = os.path.join(out_dir, fname + file_ext)
+    
+    if not os.path.exists(fullpath):
+        raise FileNotFoundError(f"File not found: {fullpath}")
+
+    print(f"Loading from: {fullpath}")
+
+    data = np.load(fullpath, allow_pickle=allow_pickle)
+
+    return data
+
+def load_from_text(BASE_DIR, path_to_data, fname, file_ext=".txt", dtype=float):
+    """
+    Load data from a text file using NumPy.
+    bsnm_list = list(load_from_text(BASE_DIR, path_to_data, 'bsnm_list', intv_ext=".db", dtype=str))
+
+    Parameters
+    ----------
+    opath : str
+        Directory path where the file is located.
+
+    fname : str
+        Base filename (without extension).
+
+    intv_ext : str, optional
+        File extension (default: ".txt").
+
+    dtype : data-type, optional
+        Data type of the resulting array.
+        Use float for numeric data, or str for text data.
+        Default is float.
+
+    Returns
+    -------
+    data : np.ndarray
+        Loaded data as a NumPy array.
+    """
+    out_dir = str(Path(BASE_DIR) / path_to_data)
+    fullpath = os.path.join(out_dir, fname + file_ext)
+
+    if not os.path.exists(fullpath):
+        raise FileNotFoundError(f"File not found: {fullpath}")
+
+    print(f"Loading from: {fullpath}")
+
+    data = np.loadtxt(fullpath, dtype=dtype)
+
+    return data
+
+
 
 def savefig(
     fig,

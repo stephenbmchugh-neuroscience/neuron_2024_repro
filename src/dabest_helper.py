@@ -16,6 +16,8 @@ from my_mpl_defaults import *
 from plotting import cm2inch
 
 
+
+
 def plot_dabest_swarm_contrast(
     analysis_of_long_df: Any,
     df_idx: Sequence[Any],
@@ -26,6 +28,7 @@ def plot_dabest_swarm_contrast(
     fwd: float = 1.25,
     fht: float = 4,
     pad: float = 1.5,
+    lw:  float = 0.5,
     swarm_ylim: Optional[Sequence[float]] = (-5, 60),
     contrast_ylim: Optional[Sequence[float]] = (-5, 20),
     swarm_maj_loc: float = 20,
@@ -126,7 +129,9 @@ def plot_dabest_swarm_contrast(
         fs=font_scale,
         show_pairs=show_pairs,
         maj_loc=[swarm_maj_loc, contrast_maj_loc],
-        bw_method=bw_method
+        bw_method=bw_method,
+        pad=pad,
+        lw=lw
     )
     ########################################################################################################
     return fig, swarm_ax, contrast_ax
@@ -219,7 +224,7 @@ def smdabest_plot(
     BIGGER_SIZE = fs[2]
 
     if maj_loc is None:
-        swarm_maj_loc = .2
+        swarm_maj_loc = 0.2
         contrast_maj_loc = swarm_maj_loc / 1
     else:
         swarm_maj_loc = maj_loc[0]
@@ -246,14 +251,18 @@ def smdabest_plot(
         raw_bars=False,
         raw_marker_size=raw_marker_size,
         swarm_side="center",
+        swarmplot_kwargs={'alpha': 1.0},
         raw_desat=raw_desat,
         raw_ylim=swarm_ylim,
+        
         contrast_bars=False,
         contrast_marker_kwargs={'markersize': contrast_marker_size},
         contrast_errorbar_kwargs={'lw': lw},
         contrast_desat=contrast_desat,
         contrast_ylim=contrast_ylim,
         contrast_paired_lines=False,
+        contrast_kwargs={'alpha': 1.0},
+        
         delta_text=False,
         group_summaries_kwargs={'lw': lw},
         reflines_kwargs=rlkwargs,
@@ -268,11 +277,13 @@ def smdabest_plot(
     swarm_ax.yaxis.set_major_locator(Ticker.MultipleLocator(swarm_maj_loc))
     contrast_ax.yaxis.set_major_locator(Ticker.MultipleLocator(contrast_maj_loc))
 
-    for ax_ in [swarm_ax, contrast_ax]:
+    for ax_ in [swarm_ax, contrast_ax]: 
         ax_.xaxis.set_tick_params(labelsize=SMALL_SIZE, width=lw, length=lw * 3)
-        ax_.yaxis.set_tick_params(labelsize=SMALL_SIZE, width=lw, length=lw * 3)
-        for aa in ['x', 'y']:
-            ax_.tick_params(axis=aa, pad=pad)
+        ax_.yaxis.set_tick_params(labelsize=SMALL_SIZE, width=lw, length=lw * 3) 
+        for spine in ax_.spines.values(): 
+            spine.set_linewidth(lw)
+            for aa in ['x', 'y']: 
+                ax_.tick_params(axis=aa, pad=pad)
 
     return fig, swarm_ax, contrast_ax
 #############################################################################################################
@@ -345,8 +356,12 @@ def generate_dabest_analysis(idata,
                              y='Data',
                              id_col='id'):
     
-    idata = an.nan_free_dict(idata,outerkey,innerkey)
-    df = dabest_long_df_2var(idata,innerkey,outerkey,col_groups,col_head)
+    
+    if len(col_head) > 4:
+        idata = an.nan_free_dict(idata,outerkey,innerkey)
+        df = dabest_long_df_2var(idata,innerkey,outerkey,col_groups,col_head)
+    else:
+        df = dabest_long_df_1var(idata,innerkey,col_groups,col_head)
     #####################################################################
     analysis_of_long_df = db2.load(df,
                                   x=x,
@@ -437,3 +452,32 @@ def update_xticklabels(sw_xtlabs,con_xtlabs,swarm_ax,contrast_ax):
     for ax_,tl in zip([swarm_ax,contrast_ax],[sw_xtlabs,con_xtlabs]):
         ax_.set_xticklabels(tl)
 #############################################################################################################
+def get_event_palette(df_idx):
+    '''
+    Helper function to get palettes for plotting
+    '''
+    all_cols = sbf.flatten(df_idx)
+    ev_pal = {'baseline_pulse':gray2,
+              'Baseline_pulse':gray2,
+              'BASE':gray2,
+              'BASE_pulse':gray2,
+              'ds_pulse':BLUE,
+              'DS_pulse':BLUE,
+              'DS_DS':BLUE,
+              'DS':BLUE,
+              'ds1_pulse':GREEN,
+              'DS1_pulse':GREEN,
+              'DS1':GREEN,
+              'DS1_DS1': GREEN,
+              'ds2_pulse':PURPLE,
+              'DS2_pulse':PURPLE,
+              'DS2':PURPLE,
+              'DS2_DS2':PURPLE,
+              'swr_pulse':ORNG,
+              'SWR_pulse':ORNG,
+              'SWR':ORNG,
+              'SWR_SWR':ORNG,
+              'DS2_SWR':LIGHTPURPLE}
+
+    return [ev_pal[x] for x in all_cols]
+

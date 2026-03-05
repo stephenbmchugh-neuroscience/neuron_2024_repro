@@ -5,7 +5,7 @@
 plotting.py
 -----------
 Matplotlib plotting helpers used to reproduce figures.
-Plotting functions accept or return (fig, ax) so the caller may further
+Some plotting functions accept or return (fig, ax) so the caller may further
 customize or save using `data_io.savefig`.
 """
 
@@ -21,6 +21,14 @@ import smBaseFunctions3 as sbf
 from my_mpl_defaults import *
 from analysis import bin_array
 
+
+def set_plot_style():
+    mpl.rcParams.update({
+        "font.family": "sans-serif",
+        "font.sans-serif": ["Arial"],
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+    })
 
 
 def figure_chooser(figure_panel: int) -> List[str]:
@@ -50,7 +58,6 @@ def figure_chooser(figure_panel: int) -> List[str]:
         event_type_list = ['ds1', 'ds2']
     else:
         raise ValueError(f"Unsupported figure_panel: {figure_panel}")
-
     return event_type_list
 
 def cm2inch(*tupl: float) -> Tuple[float, ...]:
@@ -647,3 +654,135 @@ def generate_heatmaps(zscore_dat,
         cb1.ax.tick_params(width=lw,length=3*lw,labelsize=fscale[0])
 
     return fig,ax
+    
+####################################################################################################
+def cat_plot_clf(df,
+                 hue_col='sleep_event',
+                 palette=(gray2,LIGHTPURPLE,ORNG,PURPLE),
+                 legend=False,
+                 msize=2,
+                 ylim=(0,1),
+                 ytick_width=0.25,
+                 figsize=(4,4),
+                 ylab = 'Classifier accuracy',
+                 pad=1.5,
+                 tfsize=7,
+                 xlab='',
+                 fscale=(10,12)):
+    '''
+    
+    '''
+    ################################################################################
+    mean_lw = 3
+    lw = 0.5
+    ls = '-'
+    l_offset = .4
+    alpha = 1.0
+    #################################################################################
+    fig,ax = plt.subplots(1,1,figsize=sbf.cm2inch(figsize))
+
+    ## Create scatterplot
+    ax = sns.swarmplot(data=df,
+                       x="sleep_event",
+                       y="Data",
+                       alpha=alpha,
+                       size=msize,
+                       hue=hue_col,
+                       palette=palette
+                      )
+    ## Plot means
+    df_mean = df.groupby('sleep_event', sort=False)['Data'].mean()
+    _ = [ax.hlines(y, i-l_offset, i+l_offset, zorder=10, color='k',linewidth=mean_lw, 
+                   linestyle=ls,alpha=0.3) for i, y in df_mean.reset_index()['Data'].items()]
+
+    # Set y-axis limit and tick width
+    ax.set_ylim(ylim)
+    ax.yaxis.set_major_locator(Ticker.MultipleLocator(ytick_width))
+
+    # Set x and y ticklabels fontsize
+    ax.tick_params(axis='both', 
+                   which='major',
+                   labelsize=tfsize)
+
+    # set axis bounds
+    xlim = (0,len(np.unique(df.sleep_event))-1)
+    ax = sbf.set_axis_bounds(ax,xlim,ylim,sp_len=3)
+
+    # adjust plot
+    ax = sbf.adjust_plot_pub(ax,
+                            xlab=xlab,
+                            ylab=ylab,
+                            lw=lw,
+                            raster=False,
+                            xtwidth=20,
+                            xscale=1,
+                            yscale=1,
+                            xt_fmt='.0f',
+                            yt_fmt='.2f',
+                            fscale=fscale,
+                            grid=False,
+                            pad=pad)
+    
+    return fig,ax
+################################################################################################
+def plot_single_similarity_matrix(sim_mat,
+                                  event_1,
+                                  event_2,
+                                  cbar=False,
+                                  fwd=10,
+                                  fht=10,
+                                  size_scale=2,
+                                  vlim=(-0.3,0.3),
+                                  cmap='jet',
+                                  nprs=10,
+                                  fscale=(5,6,8),
+                                  pad=3):
+    '''
+    '''
+    arr = sim_mat
+    ################################################
+    row_sums = np.sum(arr, axis=1)
+    col_sums = np.sum(arr, axis=0)
+    
+    # Identify rows and columns with zero sums
+    rows_to_keep = row_sums != 0
+    cols_to_keep = col_sums != 0
+    
+    # Delete zero-sum rows and columns
+    G = arr[rows_to_keep][:, cols_to_keep]
+    np.fill_diagonal(G, 0)
+    ###########################################################################
+    fig,ax = plt.subplots(1,1,figsize=sbf.cm2inch(fwd,fht))
+    
+    xlab=event_2.upper()
+    ylab=event_1.upper()
+    fscale = [x*size_scale for x in fscale]
+    
+    ax = sns.heatmap(G, cmap=cmap, center=0, vmin=vlim[0], vmax=vlim[1], cbar=cbar)
+    ax.set_xticklabels(ax.get_xmajorticklabels(), fontsize=fscale[1])
+    ax.set_yticklabels(ax.get_ymajorticklabels(), fontsize=fscale[1], rotation='horizontal')
+    
+    ax.set_xticks([0,G.shape[0]], ['0', str(G.shape[0])])
+    ax.set_yticks([0,G.shape[0]], ['0', str(G.shape[0])])
+
+    ax = sbf.adjust_plot_pub(ax,
+                             xlab=xlab,
+                             ylab=ylab,
+                             raster=False,
+                             fscale=fscale,
+                             grid=False,
+                             pad=pad)
+    
+    sns.despine()
+    if cbar:
+        cbar = ax.collections[0].colorbar
+        cbar.ax.tick_params(labelsize=fscale[1])
+        cbar.ax.set_ylabel('Correlation (r)',fontsize=fscale[1])
+        cbar.ax.yaxis.set_major_locator(Ticker.MultipleLocator(vlim[1]))
+
+    fig = ax.get_figure()
+
+    return fig,ax
+#############################################################################################
+
+#############################################################################################
