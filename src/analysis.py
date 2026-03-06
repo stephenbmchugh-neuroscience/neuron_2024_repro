@@ -8,6 +8,7 @@ from scipy.stats import rankdata
 import smBaseFunctions3 as sbf
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.decomposition import PCA,FastICA
 
 import copy
 import logging
@@ -814,4 +815,92 @@ def find_max_bin_1d(iDict,mindx,event_list,cond='pulse',axis=1):
         max_bin = np.nanmin([max_bin,idata])        
     return int(max_bin)
 
+def generate_pca(iDict,bsnm_list,event_list=['ds','ds1','ds2','swr'],cond='pulse',thrs=0.9,norm=True,min_comp=2):
+    ''' 
+    wrapper for calc_pca_single_matrix
+    '''
+    pc_dict = {}
+    for key,val in iDict.items():
+        tempdat = []
+        for mindx,mouse in enumerate(bsnm_list):
+            max_bin = find_max_bin_1d(iDict,
+                                      mindx,
+                                      event_list,
+                                      cond=cond)
+            idata = val[mindx][cond]
+            idata = select_random_subset(idata,max_bin=max_bin,axis=1)
+            pc_var = calc_pca_single_matrix(idata,thrs=thrs,norm=norm,min_comp=min_comp)
+            tempdat.append(pc_var)
+        pc_dict[key] = np.array(tempdat)
+    return pc_dict
+
+def calc_pca_single_matrix(
+    idata: np.ndarray,
+    thrs: float = 0.8,
+    norm: bool = False,
+    min_comp: int = 5,
+) -> Union[int, float]:
+    """
+    Compute the number of principal components required to exceed a
+    cumulative explained variance threshold for a single data matrix.
+
+    Parameters
+    ----------
+    idata : np.ndarray
+        2D input array of shape (n_components, n_bins) or (n_samples, n_features).
+        PCA is performed along axis 0 using all rows as components.
+    thrs : float, optional
+        Cumulative explained variance threshold (between 0 and 1).
+        The function returns the smallest component index for which the
+        cumulative explained variance exceeds this threshold.
+        Default is 0.8 (80% variance explained).
+    norm : bool, optional
+        If True, normalize the resulting component index by dividing by
+        the total number of components. Default is False.
+    min_comp : int, optional
+        Minimum number of components required to compute a valid result.
+        If the number of components in `idata` is less than this value,
+        the function returns np.nan. Default is 5.
+
+    Returns
+    -------
+    int | float
+        Index (0-based) of the first principal component at which the
+        cumulative explained variance exceeds `thrs`.
+
+        Returns:
+        - np.nan if the threshold is never reached.
+        - np.nan if the number of components is less than `min_comp`.
+        - A float if `norm=True` (normalized index).
+
+    Notes
+    -----
+    - The returned value is a 0-based index.
+    - If normalization is enabled, the output is scaled by the total
+      number of components.
+    - PCA is fit using `sklearn.decomposition.PCA`.
+    """
+    if idata.ndim != 2:
+        raise ValueError("idata must be a 2D array.")
+
+    nComp = idata.shape[0]
+
+    if nComp < min_comp:
+        return np.nan
+
+    pca = PCA(n_components=nComp)
+    odata = pca.fit(idata)
+    eval_ = odata.explained_variance_ratio_
+
+    cumsum_eval = np.cumsum(eval_)
+
+    try:
+        pcvar_out: Union[int, float] = int(np.where(cumsum_eval > thrs)[0][0])
+    except IndexError:
+        return np.nan
+
+    if norm:
+        pcvar_out = pcvar_out / nComp
+
+    return pcvar_out
 
